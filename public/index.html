@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Senior Care Monitor V2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .reading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .reading label {
+            font-weight: bold;
+            color: #34495e;
+        }
+        .reading span {
+            font-size: 1.1em;
+            color: #2980b9;
+        }
+        .alert span {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        #temp-gauge {
+            width: 200px;
+            height: 160px;
+            margin: 0 auto;
+        }
+        #map {
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Senior Care Dashboard V2</h1>
+        <div class="reading" style="justify-content: center;">
+            <div id="temp-gauge"></div>
+        </div>
+        <div class="reading">
+            <label>Acceleration:</label>
+            <span id="acc">0 m/s²</span>
+        </div>
+        <div class="reading">
+            <label>Fall Status:</label>
+            <span id="fall">Normal</span>
+        </div>
+        <div class="reading">
+            <label>Latitude:</label>
+            <span id="lat">0</span>
+        </div>
+        <div class="reading">
+            <label>Longitude:</label>
+            <span id="lng">0</span>
+        </div>
+        <div class="reading">
+            <label>GPS Status:</label>
+            <span id="gps">Waiting for fix</span>
+        </div>
+        <div id="map"></div>
+        <div class="button-container">
+            <button onclick="updateMap()">Restart Map</button>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.6.1/justgage.min.js"></script>
+    <script>
+        var map;
+
+        // Initialize JustGage
+        var gauge = new JustGage({
+            id: "temp-gauge",
+            value: 0,
+            min: -20,
+            max: 50,
+            title: "Temperature (°C)",
+            label: "°C",
+            decimals: 2,
+            gaugeWidthScale: 0.6,
+            customSectors: {
+                ranges: [
+                    { from: -20, to: 0, color: "#3498db" },
+                    { from: 0, to: 30, color: "#2ecc71" },
+                    { from: 30, to: 50, color: "#e74c3c" }
+                ]
+            },
+            counter: true
+        });
+
+        // Initialize map
+        function initMap(lat, lng, gpsValid) {
+            if (map) map.remove();
+            map = L.map('map').setView([gpsValid ? lat : 0, gpsValid ? lng : 0], gpsValid ? 13 : 1);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            if (gpsValid) {
+                L.marker([lat, lng]).addTo(map)
+                    .bindPopup('Current Location')
+                    .openPopup();
+            }
+        }
+        initMap(0, 0, false);
+
+        // Fetch sensor data
+        function fetchSensorData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    gauge.refresh(data.temperature);
+                    document.getElementById('acc').innerText = data.acceleration.toFixed(2) + ' m/s²';
+                    document.getElementById('fall').innerText = data.fallDetected ? 'FALL DETECTED' : 'Normal';
+                    document.getElementById('fall').parentElement.className = 'reading' + (data.fallDetected ? ' alert' : '');
+                });
+        }
+
+        // Fetch GPS data
+        function updateMap() {
+            fetch('/gps')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('lat').innerText = data.gpsValid ? data.latitude.toFixed(6) : '0';
+                    document.getElementById('lng').innerText = data.gpsValid ? data.longitude.toFixed(6) : '0';
+                    document.getElementById('gps').innerText = data.gpsValid ? 'Valid' : 'Waiting for fix';
+                    initMap(data.latitude, data.longitude, data.gpsValid);
+                });
+        }
+
+        // Update intervals
+        setInterval(fetchSensorData, 1000);
+        setInterval(updateMap, 60000);
+
+        // Initial fetch
+        fetchSensorData();
+        updateMap();
+    </script>
+</body>
+</html>
