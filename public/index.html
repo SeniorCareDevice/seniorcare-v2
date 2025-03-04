@@ -92,6 +92,14 @@
             <span id="fall">Normal</span>
         </div>
         <div class="reading">
+            <label>Heart Rate:</label>
+            <span id="hr">0 BPM</span>
+        </div>
+        <div class="reading">
+            <label>SpO2:</label>
+            <span id="spo2">0 %</span>
+        </div>
+        <div class="reading">
             <label>Latitude:</label>
             <span id="lat">0</span>
         </div>
@@ -114,7 +122,7 @@
     <script>
         var map;
 
-        // Initialize JustGage
+        // Initialize JustGage for temperature
         var gauge = new JustGage({
             id: "temp-gauge",
             value: 0,
@@ -158,6 +166,8 @@
                     document.getElementById('acc').innerText = data.acceleration.toFixed(2) + ' m/s²';
                     document.getElementById('fall').innerText = data.fallDetected ? 'FALL DETECTED' : 'Normal';
                     document.getElementById('fall').parentElement.className = 'reading' + (data.fallDetected ? ' alert' : '');
+                    document.getElementById('hr').innerText = data.heartRate > 0 ? data.heartRate.toFixed(2) + ' BPM' : 'N/A';
+                    document.getElementById('spo2').innerText = data.spo2 > 0 ? data.spo2.toFixed(2) + ' %' : 'N/A';
                 });
         }
 
