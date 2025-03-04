@@ -6,7 +6,7 @@ app.use(express.static('public'));
 app.use(express.json());
 
 // Store latest data
-let sensorData = { temperature: 0, acceleration: 0, fallDetected: false };
+let sensorData = { temperature: 0, acceleration: 0, fallDetected: false, heartRate: 0, spo2: 0 };
 let gpsData = { latitude: 0, longitude: 0, gpsValid: false };
 
 // Serve sensor data
